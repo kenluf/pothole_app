@@ -1,0 +1,50 @@
+# Database files
+*.db
+pothole_data.db
+
+# Generated evidence images
+evidence/
+static/evidence/
+
+# Model checkpoints (large files)
+*.pth
+output_retrain2/
+Dataset_Pothole/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+
+# Virtual environments
+venv/
+.venv/
+env/
+ENV/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+.env.local
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
