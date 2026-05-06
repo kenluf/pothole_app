@@ -9,7 +9,7 @@ from streamlit_folium import st_folium
 from database import init_db, get_all
 from inference import process_video, CONF_THRESHOLD
 
-DB_PATH = os.path.expanduser('~/pothole_app/pothole_data.db')
+DB_PATH = os.path.join(os.path.dirname(__file__), 'pothole_data.db')
 
 # ── Konfigurasi halaman ───────────────────────────────────────────────────────
 st.set_page_config(

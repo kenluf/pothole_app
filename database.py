@@ -2,10 +2,11 @@ import sqlite3
 import os
 from math import radians, sin, cos, sqrt, atan2
 
-DB_PATH = os.path.expanduser('~/pothole_app/pothole_data.db')
+DB_PATH = os.path.join(os.path.dirname(__file__), 'pothole_data.db')
 
 
 def init_db():
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = sqlite3.connect(DB_PATH)
     conn.execute('''
         CREATE TABLE IF NOT EXISTS pothole_data (

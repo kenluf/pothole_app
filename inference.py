@@ -26,7 +26,7 @@ from database import init_db, insert_or_update
 
 # ── Konfigurasi ───────────────────────────────────────────────────────────────
 CHECKPOINT    = os.path.join(os.path.dirname(__file__), 'deformable_detr', 'checkpoint.pth')
-EVIDENCE_DIR  = os.path.expanduser('~/pothole_app/static/evidence')
+EVIDENCE_DIR  = os.path.join(os.path.dirname(__file__), 'static', 'evidence')
 CONF_THRESHOLD = 0.4
 
 # ImageNet normalization
