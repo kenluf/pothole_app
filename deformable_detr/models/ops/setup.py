@@ -44,7 +44,10 @@ def get_extensions():
             "-D__CUDA_NO_HALF2_OPERATORS__",
         ]
     else:
-        raise NotImplementedError('Cuda is not availabel')
+        # Return empty list if CUDA is not available instead of raising error
+        print("⚠ CUDA not available, MultiScaleDeformableAttention extension will not be built")
+        print("   Pure PyTorch fallback will be used")
+        return []
 
     sources = [os.path.join(extensions_dir, s) for s in sources]
     include_dirs = [extensions_dir]
