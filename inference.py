@@ -26,6 +26,15 @@ from database import init_db, insert_or_update
 
 # ── Konfigurasi ───────────────────────────────────────────────────────────────
 CHECKPOINT    = os.path.join(os.path.dirname(__file__), 'deformable_detr', 'checkpoint.pth')
+CHECKPOINT_URL = os.getenv(
+    'CHECKPOINT_URL',
+    'https://storage.googleapis.com/checkpoint_detr/checkpoint.pth'
+)
+FILTERED_PATH = os.path.join(os.path.dirname(__file__), 'deformable_detr', 'r50_filtered.pth')
+FILTERED_URL = os.getenv(
+    'R50_FILTERED_URL',
+    'https://storage.googleapis.com/checkpoint_detr/r50_filtered.pth'
+)
 EVIDENCE_DIR  = os.path.join(os.path.dirname(__file__), 'static', 'evidence')
 CONF_THRESHOLD = 0.4
 
@@ -46,6 +55,28 @@ def _get_ocr_reader():
         import easyocr
         _ocr_reader = easyocr.Reader(['en'], gpu=torch.cuda.is_available(), verbose=False)
     return _ocr_reader
+
+
+def _download_file(url, dst_path):
+    import urllib.request
+
+    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+    print(f"Downloading model file from: {url}")
+    with urllib.request.urlopen(url) as response:
+        with open(dst_path, 'wb') as out_file:
+            while True:
+                chunk = response.read(32768)
+                if not chunk:
+                    break
+                out_file.write(chunk)
+    print(f"Saved model file to: {dst_path}")
+
+
+def _ensure_model_files():
+    if not os.path.exists(CHECKPOINT):
+        _download_file(CHECKPOINT_URL, CHECKPOINT)
+    if not os.path.exists(FILTERED_PATH):
+        _download_file(FILTERED_URL, FILTERED_PATH)
 
 
 # ── Build & load model ────────────────────────────────────────────────────────
@@ -81,6 +112,7 @@ def build_deformable_detr():
 
 
 def load_model(checkpoint_path=CHECKPOINT):
+    _ensure_model_files()
     print(f"Loading model dari: {checkpoint_path}")
     model, device = build_deformable_detr()
     ckpt = torch.load(checkpoint_path, map_location='cpu')
