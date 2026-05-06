@@ -18,14 +18,14 @@ import torchvision.transforms.functional as TF
 from types import SimpleNamespace
 
 # ── Path ke repo Deformable-DETR ─────────────────────────────────────────────
-DETR_PATH = os.path.expanduser('~/Deformable-DETR')
+DETR_PATH = os.path.join(os.path.dirname(__file__), 'deformable_detr')
 sys.path.insert(0, DETR_PATH)
 
 from models import build_model
 from database import init_db, insert_or_update
 
 # ── Konfigurasi ───────────────────────────────────────────────────────────────
-CHECKPOINT    = os.path.expanduser('~/Dataset_Pothole/output_retrain2/checkpoint.pth')
+CHECKPOINT    = os.path.join(os.path.dirname(__file__), 'deformable_detr', 'checkpoint.pth')
 EVIDENCE_DIR  = os.path.expanduser('~/pothole_app/static/evidence')
 CONF_THRESHOLD = 0.4
 

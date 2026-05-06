@@ -104,6 +104,13 @@ class Backbone(BackboneBase):
             replace_stride_with_dilation=[False, False, dilation],
             pretrained=is_main_process(), norm_layer=norm_layer)
         assert name not in ('resnet18', 'resnet34'), "number of channels are hard coded"
+        if name == 'resnet50':
+            import os
+            filtered_path = os.path.join(os.path.dirname(__file__), '..', 'r50_filtered.pth')
+            if os.path.exists(filtered_path):
+                ckpt = torch.load(filtered_path, map_location='cpu')
+                backbone.load_state_dict(ckpt, strict=False)
+                print(f"Loaded backbone from {filtered_path}")
         super().__init__(backbone, train_backbone, return_interm_layers)
         if dilation:
             self.strides[-1] = self.strides[-1] // 2
