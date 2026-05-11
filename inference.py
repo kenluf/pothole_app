@@ -115,13 +115,7 @@ def load_model(checkpoint_path=CHECKPOINT):
     _ensure_model_files()
     print(f"Loading model dari: {checkpoint_path}")
     model, device = build_deformable_detr()
-    # Handle PyTorch 2.6+ weights_only default change
-    try:
-        ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=True)
-    except Exception as e:
-        print(f"weights_only=True failed: {e}")
-        print("Falling back to weights_only=False (use only if you trust the checkpoint source)")
-        ckpt = torch.load(checkpoint_path, map_location='cpu', weights_only=False)
+    ckpt = torch.load(checkpoint_path, map_location='cpu')
     model.load_state_dict(ckpt['model'], strict=False)
     model.to(device)
     model.eval()

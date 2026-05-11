@@ -108,12 +108,7 @@ class Backbone(BackboneBase):
             import os
             filtered_path = os.path.join(os.path.dirname(__file__), '..', 'r50_filtered.pth')
             if os.path.exists(filtered_path):
-                try:
-                    ckpt = torch.load(filtered_path, map_location='cpu', weights_only=True)
-                except Exception as e:
-                    print(f"weights_only=True failed for backbone: {e}")
-                    print("Falling back to weights_only=False")
-                    ckpt = torch.load(filtered_path, map_location='cpu', weights_only=False)
+                ckpt = torch.load(filtered_path, map_location='cpu')
                 backbone.load_state_dict(ckpt, strict=False)
                 print(f"Loaded backbone from {filtered_path}")
         super().__init__(backbone, train_backbone, return_interm_layers)
