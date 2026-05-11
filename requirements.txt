@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 gdown>=4.7.0
 streamlit>=1.32.0
 pandas>=2.2.0
@@ -8,4 +9,15 @@ torch>=2.1.0
 torchvision>=0.16.0
 Pillow>=10.0.0
 easyocr>=1.7.0
+=======
+streamlit>=1.32.0
+pandas>=2.2.0
+folium>=0.14.0
+streamlit-folium>=0.7.0
+opencv-python>=4.8.0
+torch>=2.3.0
+torchvision>=0.18.0
+Pillow>=10.0.0
+easyocr>=1.7.0
+>>>>>>> parent of 36f69af (fix dependencies)
 numpy>=1.24.0
