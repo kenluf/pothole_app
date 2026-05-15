@@ -36,7 +36,7 @@ FILTERED_URL = os.getenv(
     'https://storage.googleapis.com/checkpoint_detr/r50_filtered.pth'
 )
 EVIDENCE_DIR  = os.path.join(os.path.dirname(__file__), 'static', 'evidence')
-CONF_THRESHOLD = 0.4
+CONF_THRESHOLD = 0.5
 
 # ImageNet normalization
 MEAN = [0.485, 0.456, 0.406]
