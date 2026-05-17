@@ -60,6 +60,8 @@ with tab2:
     st.write("Format: `.mp4` atau `.avi` · Resolusi minimal 720p · Maks 10 menit")
 
     uploaded = st.file_uploader("Pilih atau seret file video", type=['mp4', 'avi'])
+    st.write("Note : Semakin tinggi confidence threshold → lebih ketat, semakin rendah → lebih sensitif")
+    st.write("Rekomendasi: 0.5")
     conf = st.slider("Confidence Threshold", 0.1, 0.9, CONF_THRESHOLD, 0.05,
                      help="Semakin tinggi = lebih ketat, semakin rendah = lebih sensitif")
 
