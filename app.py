@@ -1,13 +1,13 @@
-import os
-import base64
+import os #cek path, buat folder, dll
+import base64 #untuk encoding gambar ke format base64 agar bisa ditampilkan di popup peta
 import sqlite3
-import streamlit as st
-import pandas as pd
-import folium
-from streamlit_folium import st_folium
+import streamlit as st #framework untuk membuat web app interaktif
+import pandas as pd #tabel
+import folium #untuk peta interaktif
+from streamlit_folium import st_folium #komponen untuk menampilkan peta folium di Streamlit
 
-from database import init_db, get_all
-from inference import process_video, CONF_THRESHOLD
+from database import init_db, get_all #fungsi untuk inisialisasi database dan mengambil semua data lubang jalan
+from inference import process_video, CONF_THRESHOLD #fungsi untuk memproses video dan threshold confidence default
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'pothole_data.db')
 
@@ -61,7 +61,7 @@ with tab2:
 
     uploaded = st.file_uploader("Pilih atau seret file video", type=['mp4', 'avi'])
     st.write("Note : Semakin tinggi confidence threshold → lebih ketat, semakin rendah → lebih sensitif")
-    st.write("Rekomendasi: 0.5")
+    st.write("Rekomendasi threshold: 0.5")
     conf = st.slider("Confidence Threshold", 0.1, 0.9, CONF_THRESHOLD, 0.05,
                      help="Semakin tinggi = lebih ketat, semakin rendah = lebih sensitif")
 

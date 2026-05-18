@@ -1,21 +1,12 @@
-"""
-Pipeline inferensi Deformable DETR untuk deteksi lubang jalan dari video dashcam.
-
-Alur:
-  Video MP4 → ekstrak 1 frame/detik → Deformable DETR detect
-  → jika ada pothole → EasyOCR baca GPS pojok kanan bawah
-  → Haversine dedup → SQLite → simpan foto evidence
-"""
-
-import os
-import sys
-import re
-import cv2
-import torch
-import numpy as np
-from PIL import Image
-import torchvision.transforms.functional as TF
-from types import SimpleNamespace
+import os #cek path, buat folder, dll
+import sys #modifikasi path python
+import re #regex untuk ekstrak GPS dari teks OCR
+import cv2 #OpenCV baca video, gambar, dll
+import torch #PyTorch untuk model, tensor, dll
+import numpy as np #Operasi array
+from PIL import Image #manipulasi gambar (resize, konversi, dll)
+import torchvision.transforms.functional as TF #transformasi gambar (to_tensor, normalize, dll)
+from types import SimpleNamespace #buat objek sederhana untuk menyimpan argumen model
 
 # ── Path ke repo Deformable-DETR ─────────────────────────────────────────────
 DETR_PATH = os.path.join(os.path.dirname(__file__), 'deformable_detr')
@@ -38,7 +29,7 @@ FILTERED_URL = os.getenv(
 EVIDENCE_DIR  = os.path.join(os.path.dirname(__file__), 'static', 'evidence')
 CONF_THRESHOLD = 0.5
 
-# ImageNet normalization
+# ImageNet normalization (karena model dilatih dengan backbone pretrained ImageNet)
 MEAN = [0.485, 0.456, 0.406]
 STD  = [0.229, 0.224, 0.225]
 
@@ -56,7 +47,7 @@ def _get_ocr_reader():
         _ocr_reader = easyocr.Reader(['en'], gpu=torch.cuda.is_available(), verbose=False)
     return _ocr_reader
 
-
+# Download model files jika belum ada
 def _download_file(url, dst_path):
     import urllib.request
 
@@ -82,25 +73,25 @@ def _ensure_model_files():
 # ── Build & load model ────────────────────────────────────────────────────────
 def build_deformable_detr():
     args = SimpleNamespace(
-        backbone='resnet50',
-        dilation=False,
-        position_embedding='sine',
-        position_embedding_scale=6.283185307179586,
-        num_feature_levels=4,
-        enc_layers=6,
-        dec_layers=6,
-        dim_feedforward=1024,
-        hidden_dim=256,
-        dropout=0.1,
-        nheads=8,
-        num_queries=300,
-        dec_n_points=4,
-        enc_n_points=4,
-        with_box_refine=False,
-        two_stage=False,
-        masks=False,
-        aux_loss=False,
-        dataset_file='coco',
+        backbone='resnet50',           # Backbone CNN yang digunakan
+        dilation=False,                # Tidak pakai dilated convolution
+        position_embedding='sine',     # Jenis positional encoding
+        position_embedding_scale=6.283185307179586,  # 2π
+        num_feature_levels=4,          # Jumlah skala fitur multi-level
+        enc_layers=6,                  # Jumlah layer encoder Transformer
+        dec_layers=6,                  # Jumlah layer decoder Transformer
+        dim_feedforward=1024,          # Dimensi layer feedforward
+        hidden_dim=256,                # Dimensi embedding tersembunyi
+        dropout=0.1,                   # Dropout 10% untuk regularisasi
+        nheads=8,                      # Jumlah attention head
+        num_queries=300,               # Jumlah kandidat objek yang dicek
+        dec_n_points=4,                # Jumlah sampling point decoder
+        enc_n_points=4,                # Jumlah sampling point encoder
+        with_box_refine=False,         # Tidak pakai iterative box refinement
+        two_stage=False,               # Tidak pakai two-stage detection
+        masks=False,                   # Tidak pakai segmentasi mask
+        aux_loss=False,                # Tidak pakai auxiliary loss
+        dataset_file='coco',           # Format dataset (COCO)
         # loss coef (dibutuhkan build_model tapi tidak dipakai saat inference)
         cls_loss_coef=2, bbox_loss_coef=5, giou_loss_coef=2,
         mask_loss_coef=1, dice_loss_coef=1,
@@ -114,11 +105,11 @@ def build_deformable_detr():
 def load_model(checkpoint_path=CHECKPOINT):
     _ensure_model_files()
     print(f"Loading model dari: {checkpoint_path}")
-    model, device = build_deformable_detr()
-    ckpt = torch.load(checkpoint_path, map_location='cpu')
-    model.load_state_dict(ckpt['model'], strict=False)
-    model.to(device)
-    model.eval()
+    model, device = build_deformable_detr() 
+    ckpt = torch.load(checkpoint_path, map_location='cpu') #load ke CPU dulu
+    model.load_state_dict(ckpt['model'], strict=False) #fungsi untuk memuat model, strict=False karena mungkin ada mismatch kecil antara arsitektur model dan checkpoint (misal nama layer berbeda)
+    model.to(device) #pindahkan model ke GPU jika tersedia, atau tetap di CPU jika tidak ada GPU
+    model.eval() #set model ke mode evaluasi (non-training) untuk menonaktifkan dropout & batchnorm agar output konsisten
     print(f"Model siap di device: {device}")
     return model, device
 
@@ -126,18 +117,18 @@ def load_model(checkpoint_path=CHECKPOINT):
 # ── Pre & post processing ─────────────────────────────────────────────────────
 def preprocess(frame_bgr):
     """BGR frame → normalized tensor, return juga ukuran asli (H, W)."""
-    h, w = frame_bgr.shape[:2]
-    img_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-    pil_img = Image.fromarray(img_rgb)
+    h, w = frame_bgr.shape[:2] #ambil tinggi dan lebar dari frame input
+    img_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB) #konversi dari format BGR (OpenCV) ke RGB (PIL)
+    pil_img = Image.fromarray(img_rgb) 
 
     # Resize: short side ≤ 800, long side ≤ 1333 (sama seperti training)
-    scale = min(800 / min(h, w), 1333 / max(h, w))
-    new_w, new_h = int(w * scale), int(h * scale)
-    pil_img = pil_img.resize((new_w, new_h), Image.BILINEAR)
+    scale = min(800 / min(h, w), 1333 / max(h, w)) #hitung faktor skala untuk memastikan ukuran gambar sesuai dengan batasan yang ditentukan (short side ≤ 800, long side ≤ 1333)
+    new_w, new_h = int(w * scale), int(h * scale) #hitung ukuran baru berdasarkan faktor skala
+    pil_img = pil_img.resize((new_w, new_h), Image.BILINEAR) #resize gambar menggunakan interpolasi bilinear untuk menjaga kualitas
 
-    tensor = TF.to_tensor(pil_img)
-    tensor = TF.normalize(tensor, MEAN, STD)
-    return tensor.unsqueeze(0), (h, w)
+    tensor = TF.to_tensor(pil_img) #tensor untuk memproses data, konversi gambar PIL ke tensor PyTorch (C, H, W) dengan nilai piksel di [0, 1]
+    tensor = TF.normalize(tensor, MEAN, STD)    #normalisasi dengan nilai imagenet
+    return tensor.unsqueeze(0), (h, w) #tambahkan dimensi batch (1, C, H, W) dan kembalikan ukuran asli untuk postprocessing
 
 
 def postprocess(outputs, orig_hw, threshold):
@@ -177,14 +168,14 @@ def extract_gps(frame_bgr):
     Format 70mai: "34km/h E106.5991,S6.1581"
     Return: (latitude, longitude) atau (None, None) jika gagal.
     """
-    h, w = frame_bgr.shape[:2]
-    roi   = frame_bgr[int(h * 0.75):h, int(w * 0.35):w]
+    h, w = frame_bgr.shape[:2] #ambil tinggi dan lebar dari frame input
+    roi   = frame_bgr[int(h * 0.75):h, int(w * 0.35):w] #crop pojok kanan bawah 75% tinggi dan 65% lebar
 
-    reader  = _get_ocr_reader()
-    results = reader.readtext(roi, detail=0)
-    text    = ' '.join(results)
+    reader  = _get_ocr_reader() #jalankan OCR dengan EasyOCR
+    results = reader.readtext(roi, detail=0) #jalankan OCR pada ROI, detail=0 untuk hanya mendapatkan teks tanpa koordinat atau confidence
+    text    = ' '.join(results) #gabungkan semua hasil OCR menjadi satu string
 
-    text = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', text)  # fix OCR spaces
+    text = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', text)  # fix OCR spaces di angka desimal, misal "E106 .5991" → "E106.5991"
     match = GPS_REGEX.search(text)
     if match:
         lon = float(match.group(1))
@@ -195,27 +186,27 @@ def extract_gps(frame_bgr):
 
 # ── Visualisasi ───────────────────────────────────────────────────────────────
 def draw_boxes(frame, scores, boxes):
-    for score, (x1, y1, x2, y2) in zip(scores, boxes):
-        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
-        label = f'Pothole {score:.2f}'
-        cv2.putText(frame, label, (x1, max(y1 - 10, 0)),
-                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+    for score, (x1, y1, x2, y2) in zip(scores, boxes): #iterasi setiap deteksi, gambar kotak dan label pada frame
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2) #gambar kotak hijau dengan ketebalan 2
+        label = f'Pothole {score:.2f}' #label dengan format "Pothole 0.85" (misal)
+        cv2.putText(frame, label, (x1, max(y1 - 10, 0)), #taruh label di atas kotak, pastikan tidak keluar frame
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2) #jenis font, warna dan ukuran teks
     return frame
 
 
 # ── Pipeline utama ────────────────────────────────────────────────────────────
 def process_video(video_path, conf_threshold=CONF_THRESHOLD, checkpoint=CHECKPOINT):
     init_db()
-    os.makedirs(EVIDENCE_DIR, exist_ok=True)
+    os.makedirs(EVIDENCE_DIR, exist_ok=True) #buat folder untuk menyimpan foto evidence
 
-    model, device = load_model(checkpoint)
+    model, device = load_model(checkpoint) #load model deteksi lubang jalan dari checkpoint
 
-    cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(video_path) #buka file video dengan OpenCV
     if not cap.isOpened():
-        raise FileNotFoundError(f"Video tidak ditemukan: {video_path}")
+        raise FileNotFoundError(f"Video tidak ditemukan: {video_path}") 
 
-    fps            = cap.get(cv2.CAP_PROP_FPS)
-    total_frames   = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    fps            = cap.get(cv2.CAP_PROP_FPS) #ambil frame per detik dari video 
+    total_frames   = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) #ambil total jumlah frame dalam video
     frame_interval = max(int(fps), 1)   # ambil 1 frame per detik
 
     print(f"\nVideo  : {video_path}")
@@ -234,21 +225,21 @@ def process_video(video_path, conf_threshold=CONF_THRESHOLD, checkpoint=CHECKPOI
 
     frame_idx = 0
     while True:
-        ret, frame = cap.read()
+        ret, frame = cap.read() #baca satu frame dari video, ret = True jika berhasil, false jika sudah akhir video
         if not ret:
-            break
+            break #jika sudah tidak ada frame lagi, keluar dari loop
 
-        if frame_idx % frame_interval == 0:
+        if frame_idx % frame_interval == 0: #proses hanya setiap frame_interval (misal setiap 30 frame untuk 1 fps)
             sec = frame_idx // frame_interval
             stats['total_frames'] += 1
 
             # Deteksi
-            tensor, orig_hw = preprocess(frame)
-            tensor = tensor.to(device)
-            with torch.no_grad():
-                outputs = model(tensor)
+            tensor, orig_hw = preprocess(frame) #ubah frame ke tensor siap untuk model
+            tensor = tensor.to(device) #pindahkan tensor ke gpu
+            with torch.no_grad(): #matikan kalkulasi autograd untuk efisiensi 
+                outputs = model(tensor) #jalankan model untuk mendapatkan output prediksi
 
-            scores, boxes = postprocess(outputs, orig_hw, conf_threshold)
+            scores, boxes = postprocess(outputs, orig_hw, conf_threshold) 
 
             if scores:
                 stats['detections'] += 1
@@ -258,24 +249,24 @@ def process_video(video_path, conf_threshold=CONF_THRESHOLD, checkpoint=CHECKPOI
                 lat, lon = extract_gps(frame)
 
                 if lat is None:
-                    stats['no_gps'] += 1
+                    stats['no_gps'] += 1 #jika GPS tidak terbaca, catat statistik dan lanjutkan tanpa menyimpan ke DB atau folder evidence
                     print(f"[{sec:4d}s] 🟡 Pothole {best_score:.2f} | GPS tidak terbaca")
                 else:
                     # Simpan evidence image
-                    vis_frame = draw_boxes(frame.copy(), scores, boxes)
+                    vis_frame = draw_boxes(frame.copy(), scores, boxes) #buat salinan frame untuk visualisasi, gambar kotak deteksi pada salinan tersebut
                     img_name  = f"pothole_{sec:05d}s_{best_score:.2f}.jpg"
                     img_path  = os.path.join(EVIDENCE_DIR, img_name)
-                    cv2.imwrite(img_path, vis_frame)
+                    cv2.imwrite(img_path, vis_frame) #simpan foto dengan kotak deteksi sebagai bukti
 
                     # Simpan ke DB
-                    result = insert_or_update(lat, lon, best_score, img_path)
-                    stats[result] += 1
+                    result = insert_or_update(lat, lon, best_score, img_path) #simpan data ke database
+                    stats[result] += 1 #update statistik berdasarkan hasil operasi database (inserted, updated, duplicate)  
                     print(f"[{sec:4d}s] 🔴 Pothole {best_score:.2f} | "
                           f"GPS ({lat:.4f}, {lon:.4f}) | DB: {result}")
 
         frame_idx += 1
 
-    cap.release()
+    cap.release() #tutup video setelah selesai
 
     print("\n═══════════════════════════════")
     print("           SELESAI             ")
@@ -292,7 +283,7 @@ def process_video(video_path, conf_threshold=CONF_THRESHOLD, checkpoint=CHECKPOI
 
 # ── CLI ───────────────────────────────────────────────────────────────────────
 if __name__ == '__main__':
-    import argparse
+    import argparse #untuk parsing argumen dari command line, seperti path video, confidence threshold, dan checkpoint model
     parser = argparse.ArgumentParser(description='Deteksi lubang jalan dari video dashcam')
     parser.add_argument('video',  help='Path ke file video (.mp4 / .avi)')
     parser.add_argument('--conf', type=float, default=CONF_THRESHOLD,

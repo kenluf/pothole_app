@@ -66,7 +66,7 @@ pothole_app/
 ## 🔧 Configuration
 
 ### Model Settings
-- **Confidence Threshold**: Default 0.4 (dapat diubah di UI)
+- **Confidence Threshold**: Default 0.5 (dapat diubah di UI)
 - **Frame Sampling**: 1 frame per detik
 - **GPS ROI**: Pojok kanan bawah video
 
@@ -79,25 +79,3 @@ pothole_app/
 1. **Dashboard**: Metrics total deteksi, rata-rata confidence
 2. **Upload Video**: Interface upload video dashcam (.mp4/.avi)
 3. **Peta Lokasi**: Visualisasi interaktif dengan popup evidence
-
-## 🔒 Security Notes
-
-- Repository ini menggunakan **private repository** untuk keamanan
-- Model checkpoint tidak di-include dalam repo
-- Database files di-exclude dari version control
-
-## 📝 License
-
-This project is proprietary. All rights reserved.
-
-## 🤝 Contributing
-
-1. Fork the repository
-2. Create feature branch
-3. Commit changes
-4. Push to branch
-5. Create Pull Request
-
-## 📞 Support
-
-Untuk pertanyaan atau support, silakan buat issue di repository ini.
