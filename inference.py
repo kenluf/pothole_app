@@ -1,9 +1,9 @@
 import os #cek path, buat folder, dll
-import sys #modifikasi path python
+import sys #modifikasi path python untuk impor modul dari folder lain
 import re #regex untuk ekstrak GPS dari teks OCR
 import cv2 #OpenCV baca video, gambar, dll
 import torch #PyTorch untuk model, tensor, dll
-import numpy as np #Operasi array
+import numpy as np #Operasi array untuk manipulasi data
 from PIL import Image #manipulasi gambar (resize, konversi, dll)
 import torchvision.transforms.functional as TF #transformasi gambar (to_tensor, normalize, dll)
 from types import SimpleNamespace #buat objek sederhana untuk menyimpan argumen model
@@ -72,7 +72,7 @@ def _ensure_model_files():
 
 # ── Build & load model ────────────────────────────────────────────────────────
 def build_deformable_detr():
-    args = SimpleNamespace(
+    args = SimpleNamespace( #simplenamespace untuk menyimpan argumen model, mirip dengan argparse.Namespace tapi lebih sederhana untuk penggunaan streamlit
         backbone='resnet50',           # Backbone CNN yang digunakan
         dilation=False,                # Tidak pakai dilated convolution
         position_embedding='sine',     # Jenis positional encoding

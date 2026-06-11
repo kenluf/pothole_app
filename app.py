@@ -40,10 +40,21 @@ with tab1:
         df = pd.DataFrame(rows, columns=['ID', 'Latitude', 'Longitude', 'Confidence', 'Image Path'])
 
         col1, col2, col3 = st.columns(3)
-        col1.metric("Total Lubang Terdeteksi", len(df))
-        col2.metric("Rata-rata Confidence",
-                    f"{df['Confidence'].mean():.2%}" if len(df) > 0 else "0%")
-        col3.metric("Lokasi Unik", len(df))
+        col1.metric(
+            "Total Lubang Terdeteksi",
+            len(df),
+            help="Jumlah total hasil deteksi lubang jalan yang sudah tersimpan di database."
+        )
+        col2.metric(
+            "Rata-rata Confidence",
+            f"{df['Confidence'].mean():.2%}" if len(df) > 0 else "0%",
+            help="Rata-rata tingkat keyakinan model pada semua deteksi; semakin tinggi, semakin yakin model terhadap hasilnya."
+        )
+        col3.metric(
+            "Lokasi Unik",
+            len(df),
+            help="Jumlah titik lokasi berbeda yang sudah tercatat dari hasil deteksi."
+        )
 
         st.subheader("Data Lubang Jalan")
         st.dataframe(
@@ -78,10 +89,26 @@ with tab2:
                     stats = process_video(tmp_path, conf)
                     st.success("✅ Proses selesai!")
                     col1, col2, col3, col4 = st.columns(4)
-                    col1.metric("Frame Diproses", stats['total_frames'])
-                    col2.metric("Pothole Terdeteksi", stats['detections'])
-                    col3.metric("Data Baru", stats['inserted'])
-                    col4.metric("GPS Gagal Dibaca", stats['no_gps'])
+                    col1.metric(
+                        "Frame Diproses",
+                        stats['total_frames'],
+                        help="Jumlah total frame video yang berhasil dianalisis oleh sistem deteksi."
+                    )
+                    col2.metric(
+                        "Pothole Terdeteksi",
+                        stats['detections'],
+                        help="Jumlah lubang jalan yang berhasil ditemukan dari hasil proses video."
+                    )
+                    col3.metric(
+                        "Data Baru",
+                        stats['inserted'],
+                        help="Jumlah entri baru yang ditambahkan ke database dari hasil deteksi ini."
+                    )
+                    col4.metric(
+                        "GPS Gagal Dibaca",
+                        stats['no_gps'],
+                        help="Jumlah frame atau deteksi yang tidak memiliki data GPS yang valid untuk dipetakan."
+                    )
                     st.info("Buka tab **Peta Lokasi** untuk melihat hasil.")
                 except Exception as e:
                     st.error(f"❌ Error: {e}")
